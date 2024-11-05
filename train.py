@@ -138,7 +138,7 @@ def sample_enhancement(model,inferenceloader,epoch):
     '''
     model.eval()
     cvd_process = cvdSimulateNet(cuda=True,batched_input=True) # 保证在同一个设备上进行全部运算
-    for img in inferenceloader:
+    for img,_ in inferenceloader:
         img_cvd = cvd_process(img)
         img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape 1,C,H,W
         img_t:torch.Tensor = img[0,...].unsqueeze(0)
@@ -148,15 +148,16 @@ def sample_enhancement(model,inferenceloader,epoch):
 
     for i in tqdm(range(args.size//args.patch)):
         for j in range(args.size//args.patch):
-            img_t_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch].clone()    # 重新上色后的patch
-            img_cvd_patch = cvd_process(img_t_patch).cuda()
+            img_t_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch].clone()    # 重新调色后的patch
+            img_t_patch.requires_grad = True
+            # img_cvd_patch = cvd_process(img_t_patch).cuda()
             img_ori_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch]  # 作为GT的patch
             inference_optimizer = torch.optim.SGD(img_t_patch,lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
-            for iter in range(100):
+            for iter in range(50):
                 inference_optimizer.zero_grad()
                 img_cvd_patch = cvd_process(img_t_patch).cuda()
                 out = model(img_cvd.cuda(),img_cvd_patch.cuda())
-                loss = inference_criterion(out,img_ori_patch.cuda())
+                loss = inference_criterion(out,img_ori_patch.cuda())    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
                 loss.backward()
                 inference_optimizer.step()
 
