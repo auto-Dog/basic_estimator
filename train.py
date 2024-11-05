@@ -59,17 +59,17 @@ train_val_percent = 0.8
 
 trainset = CVDcifar('./',train=True,download=True,patch_size=args.patch)
 testset = CVDcifar('./',train=False,download=True,patch_size=args.patch)
-inferenceset = CIFAR10('./',train=False,download=True)
+inferenceset = CIFAR10('./',train=False,download=True,transforms=transforms.Compose([transforms.ToTensor(),]))
 
 train_size = int(len(trainset) * train_val_percent)
 val_size = len(trainset) - train_size
 trainset, valset = torch.utils.data.random_split(trainset, [train_size, val_size])
+print(f'Dataset Information: Training Samples:{len(trainset)}, Validating Samples:{len(valset)}')
 
 trainloader = torch.utils.data.DataLoader(trainset,batch_size=args.batchsize,shuffle = True)
 valloader = torch.utils.data.DataLoader(valset,batch_size=args.batchsize,shuffle = True)
 testloader = torch.utils.data.DataLoader(testset,batch_size=args.batchsize,shuffle = False)
-
-inferenceloader = torch.utils.data.DataLoader(inferenceset,batch_size=args.batchsize,shuffle = False)
+inferenceloader = torch.utils.data.DataLoader(inferenceset,batch_size=args.batchsize,shuffle = False,)
 # trainval_loader = {'train' : trainloader, 'valid' : validloader}
 
 model = ViT('ColorViT', pretrained=False,image_size=32,patches=4,num_classes=4*4*3)
