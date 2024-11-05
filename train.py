@@ -139,7 +139,7 @@ def sample_enhancement(model,inferenceloader,epoch):
     model.eval()
     cvd_process = cvdSimulateNet(cuda=True,batched_input=True) # 保证在同一个设备上进行全部运算
     for img,_ in inferenceloader:
-        img_cvd = cvd_process(img)
+        img_cvd = cvd_process(img.cuda())
         img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape 1,C,H,W
         img_t:torch.Tensor = img[0,...].unsqueeze(0)
         break   # 只要第一张
@@ -156,7 +156,7 @@ def sample_enhancement(model,inferenceloader,epoch):
             for iter in range(50):
                 inference_optimizer.zero_grad()
                 img_cvd_patch = cvd_process(img_t_patch).cuda()
-                out = model(img_cvd.cuda(),img_cvd_patch.cuda())
+                out = model(img_cvd,img_cvd_patch)
                 loss = inference_criterion(out,img_ori_patch.cuda())    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
                 loss.backward()
                 inference_optimizer.step()

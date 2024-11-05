@@ -54,7 +54,8 @@ class cvdSimulateNet(nn.Module):
     
     def sRGB_to_alms(self,image_sRGB:torch.tensor):
         if self.cuda_flag:
-            mask_srgb = (image_sRGB<=0.04045).cuda()
+            mask_srgb = (image_sRGB<=0.04045)
+            mask_srgb= mask_srgb.cuda()
             self.xyz_to_lms_mat=self.xyz_to_lms_mat.cuda()
             self.rgb_to_xyz_mat=self.rgb_to_xyz_mat.cuda()
             linear_RGB = torch.zeros_like(image_sRGB).cuda()
