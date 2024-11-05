@@ -42,7 +42,7 @@ parser.add_argument('--size',type=int, default=32)
 parser.add_argument('--t', type=float, default=0.5)
 parser.add_argument('--save_interval', type=int, default=5)
 parser.add_argument('--test_fold','-f',type=int)
-parser.add_argument('--batchsize',type=int,default=32)
+parser.add_argument('--batchsize',type=int,default=64)
 parser.add_argument('--test',type=bool,default=False)
 parser.add_argument('--epoch', type=int, default=50)
 args = parser.parse_args()
@@ -146,7 +146,7 @@ def sample_enhancement(model,inferenceloader,epoch):
     img_out = img_t.clone()
     inference_criterion = conditionP()
 
-    for i in tqdm(args.size//args.patch):
+    for i in tqdm(range(args.size//args.patch)):
         for j in range(args.size//args.patch):
             img_t_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch].clone()    # 重新上色后的patch
             img_cvd_patch = cvd_process(img_t_patch).cuda()
