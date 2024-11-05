@@ -154,7 +154,7 @@ def sample_enhancement(model,inferenceloader,epoch):
             # img_cvd_patch = cvd_process(img_t_patch).cuda()
             img_ori_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch]  # 作为GT的patch
             inference_optimizer = torch.optim.SGD(params=[img_t_patch],lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
-            for iter in range(50):
+            for iter in range(30):
                 inference_optimizer.zero_grad()
                 img_cvd_patch = cvd_process(img_t_patch)
                 out = model(img_cvd,img_cvd_patch)
@@ -163,7 +163,8 @@ def sample_enhancement(model,inferenceloader,epoch):
                 inference_optimizer.step()
 
             img_out[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch] = img_t_patch
-    img_out_array = img_out.squeeze(0).cpu().detach().numpy()
+    img_out_array = img_out.squeeze(0).permute(1,2,0).cpu().detach().numpy()
+    img_out_array = np.clip(img_out_array,0.0,1.0)
     plt.imshow(img_out_array)
     plt.savefig('./run/'+f'sample_e{epoch}.png')
 
@@ -183,7 +184,7 @@ if args.test == True:
 else:
     for i in range(args.epoch):
         print("===========Epoch:{}==============".format(i))
-        sample_enhancement(model,inferenceloader,i) # debug
+        # sample_enhancement(model,inferenceloader,i) # debug
         train(trainloader, model,criterion,optimizer,lrsch,logger,args,i)
         score, model_save = validate(valloader,model,criterion,optimizer,lrsch,logger,args)
         sample_enhancement(model,inferenceloader,i)
