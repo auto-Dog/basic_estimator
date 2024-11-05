@@ -53,15 +53,17 @@ class cvdSimulateNet(nn.Module):
         return torch.einsum('vi,biju->bvju',matrix,batched_image)
     
     def sRGB_to_alms(self,image_sRGB:torch.tensor):
-        mask_srgb = (image_sRGB<=0.04045)
-
         if self.cuda_flag:
+            mask_srgb = (image_sRGB<=0.04045).cuda()
+            self.xyz_to_lms_mat=self.xyz_to_lms_mat.cuda()
+            self.rgb_to_xyz_mat=self.rgb_to_xyz_mat.cuda()
             linear_RGB = torch.zeros_like(image_sRGB).cuda()
             image_xyz = torch.zeros_like(image_sRGB).cuda()
             image_alms = torch.zeros_like(image_sRGB).cuda()
             linear_RGB[mask_srgb] = image_sRGB[mask_srgb]/12.92
             linear_RGB[~mask_srgb] = torch.pow((image_sRGB[~mask_srgb]+0.055)/1.055,torch.tensor(2.4).cuda())# decode to linear
         else:
+            mask_srgb = (image_sRGB<=0.04045)
             linear_RGB = torch.zeros_like(image_sRGB)
             image_xyz = torch.zeros_like(image_sRGB)
             image_alms = torch.zeros_like(image_sRGB)
@@ -88,11 +90,12 @@ class cvdSimulateNet(nn.Module):
         return lms_image_cvd
     
 if __name__ == '__main__':
-    myobserver = cvdSimulateNet(batched_input=True)
+    myobserver = cvdSimulateNet(cuda=True,batched_input=True)
     image_sample = Image.open('C:\\Users\\alphadu\\OneDrive\\CIE_CURVE\\CVD_simulation\\CVD_test.png').convert('RGB')
     image_sample = torch.tensor(np.array(image_sample)).permute(2,0,1).unsqueeze(0)/255.
+    image_sample = image_sample.cuda()
     image_sample = myobserver(image_sample)
-    image_array = image_sample.squeeze(0).permute(1,2,0).numpy()
+    image_array = image_sample.squeeze(0).permute(1,2,0).cpu().numpy()
     # print(np.min(image_array),np.max(image_array))  # debug
     image_array = image_array/np.max(image_array)
     plt.imshow(image_array)
