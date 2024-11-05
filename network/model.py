@@ -177,8 +177,7 @@ class ViT(nn.Module):
         if hasattr(self, 'fc'):
             x = self.norm(x)[:, 0]  # b,d
             x = self.fc(x)  # b,num_classes
-            b,c,_ = x.shape
-            x = x.reshape(b,c,self.patch_size,self.patch_size)  # new, reshape output
+            x = x.reshape(b,3,self.patch_size,self.patch_size)  # new, reshape output
         return x
 
 # if __name__ == '__main__':

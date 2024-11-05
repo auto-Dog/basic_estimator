@@ -72,7 +72,7 @@ testloader = torch.utils.data.DataLoader(testset,batch_size=args.batchsize,shuff
 inferenceloader = torch.utils.data.DataLoader(inferenceset,batch_size=args.batchsize,shuffle = False)
 # trainval_loader = {'train' : trainloader, 'valid' : validloader}
 
-model = ViT('ColorViT', pretrained=False,image_size=32,patches=4,num_classes=4*4)
+model = ViT('ColorViT', pretrained=False,image_size=32,patches=4,num_classes=4*4*3)
 model = model.cuda()
 
 criterion = nn.MSELoss()
