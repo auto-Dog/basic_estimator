@@ -139,7 +139,8 @@ def sample_enhancement(model,inferenceloader,epoch):
     model.eval()
     cvd_process = cvdSimulateNet(cuda=True,batched_input=True) # 保证在同一个设备上进行全部运算
     for img,_ in inferenceloader:
-        img_cvd = cvd_process(img.cuda())
+        img = img.cuda()
+        img_cvd = cvd_process(img)
         img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape 1,C,H,W
         img_t:torch.Tensor = img[0,...].unsqueeze(0)
         break   # 只要第一张
@@ -155,9 +156,9 @@ def sample_enhancement(model,inferenceloader,epoch):
             inference_optimizer = torch.optim.SGD(img_t_patch,lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
             for iter in range(50):
                 inference_optimizer.zero_grad()
-                img_cvd_patch = cvd_process(img_t_patch).cuda()
+                img_cvd_patch = cvd_process(img_t_patch)
                 out = model(img_cvd,img_cvd_patch)
-                loss = inference_criterion(out,img_ori_patch.cuda())    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
+                loss = inference_criterion(out,img_ori_patch)    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
                 loss.backward()
                 inference_optimizer.step()
 
@@ -182,6 +183,7 @@ if args.test == True:
 else:
     for i in range(args.epoch):
         print("===========Epoch:{}==============".format(i))
+        sample_enhancement(model,inferenceloader,i) # debug
         train(trainloader, model,criterion,optimizer,lrsch,logger,args,i)
         score, model_save = validate(valloader,model,criterion,optimizer,lrsch,logger,args)
         sample_enhancement(model,inferenceloader,i)
