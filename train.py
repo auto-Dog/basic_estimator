@@ -59,7 +59,7 @@ train_val_percent = 0.8
 
 trainset = CVDcifar('./',train=True,download=True,patch_size=args.patch)
 testset = CVDcifar('./',train=False,download=True,patch_size=args.patch)
-inferenceset = CIFAR10('./',train=False,download=True,transforms=transforms.Compose([transforms.ToTensor(),]))
+inferenceset = CIFAR10('./',train=False,download=True,transform=transforms.Compose([transforms.ToTensor(),]))
 
 train_size = int(len(trainset) * train_val_percent)
 val_size = len(trainset) - train_size
