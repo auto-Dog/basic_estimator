@@ -54,13 +54,18 @@ class cvdSimulateNet(nn.Module):
     
     def sRGB_to_alms(self,image_sRGB:torch.tensor):
         mask_srgb = (image_sRGB<=0.04045)
-        linear_RGB = torch.zeros_like(image_sRGB)
-        image_xyz = torch.zeros_like(image_sRGB)
-        image_alms = torch.zeros_like(image_sRGB)
-        linear_RGB[mask_srgb] = image_sRGB[mask_srgb]/12.92
+
         if self.cuda_flag:
+            linear_RGB = torch.zeros_like(image_sRGB).cuda()
+            image_xyz = torch.zeros_like(image_sRGB).cuda()
+            image_alms = torch.zeros_like(image_sRGB).cuda()
+            linear_RGB[mask_srgb] = image_sRGB[mask_srgb]/12.92
             linear_RGB[~mask_srgb] = torch.pow((image_sRGB[~mask_srgb]+0.055)/1.055,torch.tensor(2.4).cuda())# decode to linear
         else:
+            linear_RGB = torch.zeros_like(image_sRGB)
+            image_xyz = torch.zeros_like(image_sRGB)
+            image_alms = torch.zeros_like(image_sRGB)
+            linear_RGB[mask_srgb] = image_sRGB[mask_srgb]/12.92
             linear_RGB[~mask_srgb] = torch.pow((image_sRGB[~mask_srgb]+0.055)/1.055,torch.tensor(2.4))# decode to linear
         # print(f'Shape {linear_RGB.shape}')   # debug
         image_xyz = self.einsum_dot_tensor(linear_RGB,self.rgb_to_xyz_mat,)
