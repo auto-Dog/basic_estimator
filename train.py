@@ -148,7 +148,7 @@ def sample_enhancement(model,inferenceloader,epoch):
 
     for i in tqdm(range(args.size//args.patch)):
         for j in range(args.size//args.patch):
-            img_t_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch].clone()    # 重新调色后的patch
+            img_t_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch].clone().cuda()    # 重新调色后的patch
             img_t_patch.requires_grad = True
             # img_cvd_patch = cvd_process(img_t_patch).cuda()
             img_ori_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch]  # 作为GT的patch
