@@ -88,6 +88,7 @@ class ViT(nn.Module):
         self.image_size = image_size                
 
         # Image and patch sizes
+        self.patch_size = patches
         h, w = as_tuple(image_size)  # image sizes
         fh, fw = as_tuple(patches)  # patch sizes
         gh, gw = h // fh, w // fw  # number of patches
@@ -159,7 +160,7 @@ class ViT(nn.Module):
         Args:
             x (tensor): `b,c,fh,fw`
         """
-        b, c, fh, fw = x.shape
+        b, c, h, w = x.shape
         x = self.patch_embedding(x)  # b,d,gh,gw
         x = x.flatten(2).transpose(1, 2)  # b,gh*gw,d
         x_ci = self.ci_patch_embedding(x_color_i).flatten(2).transpose(1, 2)   # b,1,d  # new, for colorvit
@@ -176,6 +177,8 @@ class ViT(nn.Module):
         if hasattr(self, 'fc'):
             x = self.norm(x)[:, 0]  # b,d
             x = self.fc(x)  # b,num_classes
+            b,c,_ = x.shape
+            x = x.reshape(b,c,self.patch_size,self.patch_size)  # new, reshape output
         return x
 
 # if __name__ == '__main__':
