@@ -153,7 +153,7 @@ def sample_enhancement(model,inferenceloader,epoch):
             img_t_patch.requires_grad = True
             # img_cvd_patch = cvd_process(img_t_patch).cuda()
             img_ori_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch]  # 作为GT的patch
-            inference_optimizer = torch.optim.SGD(img_t_patch,lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
+            inference_optimizer = torch.optim.SGD(params=[img_t_patch],lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
             for iter in range(50):
                 inference_optimizer.zero_grad()
                 img_cvd_patch = cvd_process(img_t_patch)
