@@ -113,7 +113,7 @@ def validate(testloader, model, criterion, optimizer, lrsch, logger, args):
     model.eval()
     loss_logger = 0.
 
-    for img, ci_patch, ci_rgb in tqdm(trainloader,ascii=True,ncols=60):
+    for img, ci_patch, ci_rgb in tqdm(testloader,ascii=True,ncols=60):
         with torch.no_grad():
             outs = model(img.cuda(),ci_patch.cuda())   
         ci_rgb = ci_rgb.cuda()
