@@ -124,6 +124,7 @@ class ViT(nn.Module):
         # Regression head
         self.norm = nn.LayerNorm(pre_logits_size, eps=1e-6)
         self.fc = nn.Linear(pre_logits_size, num_classes)
+        self.sigmoid_out = nn.Sigmoid()
 
         # Initialize weights
         self.init_weights()
@@ -178,6 +179,7 @@ class ViT(nn.Module):
             x = self.norm(x)[:, 0]  # b,d
             x = self.fc(x)  # b,num_classes
             x = x.reshape(b,3,self.patch_size,self.patch_size)  # new, reshape output
+            x = self.sigmoid_out(x) # make it an image
         return x
 
 # if __name__ == '__main__':

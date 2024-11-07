@@ -12,6 +12,7 @@ import torchvision.models as models
 from torchvision.datasets import CIFAR10
 from sklearn.metrics import classification_report, roc_auc_score, roc_curve, accuracy_score
 import matplotlib.pyplot as plt
+from PIL import Image
 # from sklearn.model_selection import StratifiedGroupKFold
 
 from utils.logger import Logger
@@ -73,7 +74,7 @@ testloader = torch.utils.data.DataLoader(testset,batch_size=args.batchsize,shuff
 inferenceloader = torch.utils.data.DataLoader(inferenceset,batch_size=args.batchsize,shuffle = False,)
 # trainval_loader = {'train' : trainloader, 'valid' : validloader}
 
-model = ViT('ColorViT', pretrained=False,image_size=32,patches=4,num_classes=4*4*3)
+model = ViT('ColorViT', pretrained=False,image_size=32,patches=4,dim=512,ff_dim=2048,num_layers=6,num_heads=6,num_classes=4*4*3)
 model = model.cuda()
 
 criterion = nn.MSELoss()
@@ -139,12 +140,19 @@ def sample_enhancement(model,inferenceloader,epoch):
     '''
     model.eval()
     cvd_process = cvdSimulateNet(cuda=True,batched_input=True) # 保证在同一个设备上进行全部运算
-    for img,_ in inferenceloader:
-        img = img.cuda()
-        img_cvd = cvd_process(img)
-        img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
-        img_t:torch.Tensor = img[0,...].unsqueeze(0)        # shape C,H,W
-        break   # 只要第一张
+    # for img,_ in inferenceloader:
+    #     img = img.cuda()
+    #     img_cvd = cvd_process(img)
+    #     img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
+    #     img_t:torch.Tensor = img[0,...].unsqueeze(0)        # shape C,H,W
+    #     break   # 只要第一张
+    image_sample = Image.open('CVD_test.png').convert('RGB').resize((32,32))
+    image_sample = torch.tensor(np.array(image_sample)).permute(2,0,1).unsqueeze(0)/255.
+    image_sample = image_sample.cuda()
+    img_cvd = cvd_process(image_sample)
+    img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
+    img_t:torch.Tensor = image_sample[0,...].unsqueeze(0)        # shape C,H,W
+
     img_out = img_t.clone()
     inference_criterion = conditionP()
 
