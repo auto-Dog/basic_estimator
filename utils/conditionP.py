@@ -19,7 +19,8 @@ class conditionP(nn.Module):
         batch_dim = log_probs.shape[0]
         log_probs = log_probs.reshape(batch_dim,-1)
         # 返回概率密度的负对数，作为损失
-        return -log_probs.mean(dim=1)
+        # return -log_probs.mean(dim=1)
+        return -log_probs.mean()
     
 if __name__ == '__main__':
     image = torch.randn((2,3,4,4))
