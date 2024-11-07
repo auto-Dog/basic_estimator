@@ -162,7 +162,7 @@ def sample_enhancement(model,inferenceloader,epoch):
         loss.backward()
         inference_optimizer.step()
 
-    ori_out_array = img_out.permute(1,2,0).cpu().detach().numpy()
+    ori_out_array = img_out.squeeze(0).permute(1,2,0).cpu().detach().numpy()
 
     recolor_out_array = patch_compose(out)
     recolor_out_array = recolor_out_array.squeeze(0).permute(1,2,0).cpu().detach().numpy()
