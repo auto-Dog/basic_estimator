@@ -21,6 +21,7 @@ from dataloaders.CVDcifar import CVDcifar
 from network import ViT
 from utils.cvdObserver import cvdSimulateNet
 from utils.conditionP import conditionP
+from utils.utility import patch_split,patch_compose
 
 # hugface官方实现
 # from transformers import ViTImageProcessor, ViTForImageClassification
@@ -141,32 +142,56 @@ def sample_enhancement(model,inferenceloader,epoch):
     for img,_ in inferenceloader:
         img = img.cuda()
         img_cvd = cvd_process(img)
-        img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape 1,C,H,W
-        img_t:torch.Tensor = img[0,...].unsqueeze(0)
+        img_cvd:torch.Tensor = img_cvd[0,...]  # shape C,H,W
+        img_t:torch.Tensor = img[0,...]         # shape C,H,W
         break   # 只要第一张
     img_out = img_t.clone()
     inference_criterion = conditionP()
 
-    for i in tqdm(range(args.size//args.patch)):
-        for j in range(args.size//args.patch):
-            img_t_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch].clone().cuda()    # 重新调色后的patch
-            img_t_patch.requires_grad = True
-            # img_cvd_patch = cvd_process(img_t_patch).cuda()
-            img_ori_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch]  # 作为GT的patch
-            inference_optimizer = torch.optim.SGD(params=[img_t_patch],lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
-            for iter in range(30):
-                inference_optimizer.zero_grad()
-                img_cvd_patch = cvd_process(img_t_patch)
-                out = model(img_cvd,img_cvd_patch)
-                loss = inference_criterion(out,img_ori_patch)    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
-                loss.backward()
-                inference_optimizer.step()
+    # TODO: 改为更模块化的结构，利用batch提高运行效率
+    img_cvd_batch = img_cvd.repeat(64,1,1,1)
+    img_t_patches = patch_split(img_t.clone())
+    img_t_patches.requires_grad = True
+    img_ori_patches = patch_split(img_t)
+    inference_optimizer = torch.optim.SGD(params=[img_t_patches],lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
+    for iter in range(30):
+        inference_optimizer.zero_grad()
+        img_cvd_patches = cvd_process(img_t_patches)
+        out = model(img_cvd_batch,img_cvd_patches)
+        loss = inference_criterion(out,img_ori_patches)    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
+        loss.backward()
+        inference_optimizer.step()
 
-            img_out[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch] = img_t_patch
-    img_out_array = img_out.squeeze(0).permute(1,2,0).cpu().detach().numpy()
-    img_out_array = np.clip(img_out_array,0.0,1.0)
+    ori_out_array = img_out.permute(1,2,0).cpu().detach().numpy()
+
+    recolor_out_array = patch_compose(out)
+    recolor_out_array = recolor_out_array.squeeze(0).permute(1,2,0).cpu().detach().numpy()
+
+    img_out_array = patch_compose(img_t_patches)
+    img_out_array = img_out_array.squeeze(0).permute(1,2,0).cpu().detach().numpy()
+
+    # for i in tqdm(range(args.size//args.patch)):
+    #     for j in range(args.size//args.patch):
+    #         img_t_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch].clone().cuda()    # 重新调色后的patch
+    #         img_t_patch.requires_grad = True
+    #         # img_cvd_patch = cvd_process(img_t_patch).cuda()
+    #         img_ori_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch]  # 作为GT的patch
+    #         inference_optimizer = torch.optim.SGD(params=[img_t_patch],lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
+    #         for iter in range(30):
+    #             inference_optimizer.zero_grad()
+    #             img_cvd_patch = cvd_process(img_t_patch)
+    #             out = model(img_cvd,img_cvd_patch)
+    #             loss = inference_criterion(out,img_ori_patch)    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
+    #             loss.backward()
+    #             inference_optimizer.step()
+
+    #         img_out[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch] = img_t_patch
+    # img_out_array = img_out.squeeze(0).permute(1,2,0).cpu().detach().numpy()
+
+    img_out_array = np.clip(np.vstack([ori_out_array,recolor_out_array,img_out_array]),0.0,1.0)
     plt.imshow(img_out_array)
     plt.savefig('./run/'+f'sample_e{epoch}.png')
+
 
 
 def log_metric(prefix, logger, loss):

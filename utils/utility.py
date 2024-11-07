@@ -84,5 +84,25 @@ class LossTracker:
         self.weight_the_losses()
         self.get_total_loss()
 
+def patch_split(bchw_image:torch.Tensor,patch_size=(4,4)):
+    '''Given BCHW Tensor Image(B=1), split it into patches and stack them in the batch dimension'''
+    assert (len(bchw_image.shape)==4 and bchw_image.shape[0]==1),'When trying to split into patches, found that batch size is not 1'
+    ori_shape = bchw_image.shape
+    patches = torch.nn.functional.unfold(bchw_image,kernel_size=patch_size,stride=patch_size)   # out (B,CpHpW,nP) tensor
+    # print(patches.shape)    # debug
+    patches = patches.squeeze(0)
+    patches = patches.permute(1,0).contiguous() # transpose dims, out (nP,CpHpW)
+    nP = patches.shape[0]
+    patches = patches.view(nP,ori_shape[1],patch_size[0],patch_size[1]).contiguous()
+    return patches
 
-        
+def patch_compose(bchw_patches:torch.Tensor,output_size=(32,32)):
+    '''Given BCHW Tensor Image Batches, compose them to a 1CHW image'''
+    # patchlize
+    ori_shape = bchw_patches.shape
+    patches = bchw_patches.view(ori_shape[0],-1).permute(1,0).contiguous()   
+    patches = patches.unsqueeze(0)  # out (B,CpHpW,nP) tensor
+    # print(patches.shape)    # debug
+    reconstructed_image = torch.nn.functional.fold(patches,output_size=output_size,kernel_size=(ori_shape[2],ori_shape[3]),stride=(ori_shape[2],ori_shape[3]))
+
+    return reconstructed_image
