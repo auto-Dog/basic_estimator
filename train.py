@@ -205,7 +205,8 @@ if args.test == True:
     finaltestset = CVDcifar('./',train=False,download=True)
     finaltestloader = torch.utils.data.DataLoader(finaltestset,batch_size=args.batchsize,shuffle = False,num_workers=8)
     model.load_state_dict(torch.load(pth_location, map_location='cpu'))
-    testing(finaltestloader,model,criterion,optimizer,lrsch,logger,args)
+    sample_enhancement(model,inferenceloader,-1)
+    # testing(finaltestloader,model,criterion,optimizer,lrsch,logger,args)
 else:
     for i in range(args.epoch):
         print("===========Epoch:{}==============".format(i))
