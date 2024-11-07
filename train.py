@@ -210,7 +210,7 @@ if args.test == True:
 else:
     for i in range(args.epoch):
         print("===========Epoch:{}==============".format(i))
-        sample_enhancement(model,inferenceloader,i) # debug
+        # sample_enhancement(model,inferenceloader,i) # debug
         train(trainloader, model,criterion,optimizer,lrsch,logger,args,i)
         score, model_save = validate(valloader,model,criterion,optimizer,lrsch,logger,args)
         sample_enhancement(model,inferenceloader,i)
