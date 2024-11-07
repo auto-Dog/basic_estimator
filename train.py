@@ -142,8 +142,8 @@ def sample_enhancement(model,inferenceloader,epoch):
     for img,_ in inferenceloader:
         img = img.cuda()
         img_cvd = cvd_process(img)
-        img_cvd:torch.Tensor = img_cvd[0,...]  # shape C,H,W
-        img_t:torch.Tensor = img[0,...]         # shape C,H,W
+        img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
+        img_t:torch.Tensor = img[0,...].unsqueeze(0)        # shape C,H,W
         break   # 只要第一张
     img_out = img_t.clone()
     inference_criterion = conditionP()
