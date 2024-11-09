@@ -64,7 +64,7 @@ class CVDImageNet(ImageFolder):
         self.my_transform = transforms.Compose(
             [
                 transforms.ToTensor(),
-                transforms.Resize(self.image_size),
+                transforms.Resize((self.image_size,self.image_size)),
             ]
         )
         self.cvd_observer = cvdSimulateNet('protan')
