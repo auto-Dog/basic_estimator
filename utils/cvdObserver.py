@@ -91,12 +91,20 @@ class cvdSimulateNet(nn.Module):
         return lms_image_cvd
     
 if __name__ == '__main__':
-    myobserver = cvdSimulateNet(cuda=True,batched_input=True)
-    image_sample = Image.open('C:\\Users\\alphadu\\OneDrive\\CIE_CURVE\\CVD_simulation\\CVD_test.png').convert('RGB')
-    image_sample = torch.tensor(np.array(image_sample)).permute(2,0,1).unsqueeze(0)/255.
-    image_sample = image_sample.cuda()
-    image_sample = myobserver(image_sample)
-    image_array = image_sample.squeeze(0).permute(1,2,0).cpu().numpy()
+    myobserver = cvdSimulateNet(cuda=False,batched_input=True)
+    image_sample_ori = Image.open('C:\\Users\\Administrator\\OneDrive\\CIE_CURVE\\CVD_simulation\\CVD_test.png').convert('RGB')
+    image_sample_ori = torch.tensor(np.array(image_sample_ori)).permute(2,0,1).unsqueeze(0)/255.
+    image_sample = image_sample_ori.clone()
+    print(image_sample.is_leaf)
+    # Test loss backward ability
+    image_sample.requires_grad = True
+    # image_sample = image_sample.cuda()
+    image_sample_o = myobserver(image_sample)
+    image_loss = torch.mean(torch.exp(-image_sample_o))
+    image_loss.backward()
+    print(image_sample.grad)
+
+    image_array = image_sample_o.squeeze(0).permute(1,2,0).detach().numpy()
     # print(np.min(image_array),np.max(image_array))  # debug
     image_array = image_array/np.max(image_array)
     plt.imshow(image_array)

@@ -78,10 +78,11 @@ class CVDImageNet(ImageNet):
         sample = self.loader(path)
 
         img = self.transform(sample)
+        img_target = img.clone()
         random_index = torch.randint(0,self.image_size//self.patch_size,size=(2,))
         patch_target = img[:, random_index[0]*self.patch_size:random_index[0]*self.patch_size+self.patch_size, 
                            random_index[1]*self.patch_size:random_index[1]*self.patch_size+self.patch_size]
         patch = self.cvd_observer(patch_target)
         img = self.cvd_observer(img)
 
-        return img, patch, patch_target # CVD image, CVD patch, patch target
+        return img, patch, img_target, patch_target # CVD image, CVD patch, image target, patch target

@@ -19,7 +19,7 @@ from utils.logger import Logger
 from tqdm import tqdm
 from dataloaders.pic_data import ImgDataset
 from dataloaders.CVDcifar import CVDcifar
-from network import ViT
+from network import ViT,TinyUNet
 from utils.cvdObserver import cvdSimulateNet
 from utils.conditionP import conditionP
 from utils.utility import patch_split,patch_compose
@@ -74,7 +74,8 @@ testloader = torch.utils.data.DataLoader(testset,batch_size=args.batchsize,shuff
 inferenceloader = torch.utils.data.DataLoader(inferenceset,batch_size=args.batchsize,shuffle = False,)
 # trainval_loader = {'train' : trainloader, 'valid' : validloader}
 
-model = ViT('ColorViT', pretrained=False,image_size=32,patches=4,num_layers=6,num_heads=6,num_classes=4*4*3)
+# model = ViT('ColorViT', pretrained=False,image_size=32,patches=4,num_layers=6,num_heads=6,num_classes=4*4*3)
+model = TinyUNet(3,3)
 model = model.cuda()
 
 criterion = nn.MSELoss()
@@ -87,10 +88,10 @@ def train(trainloader, model, criterion, optimizer, lrsch, logger, args, epoch):
     model.train()
     loss_logger = 0.
     logger.update_step()
-    for img, ci_patch, ci_rgb in tqdm(trainloader,ascii=True,ncols=60):
+    for img, ci_patch, img_target, ci_rgb in tqdm(trainloader,ascii=True,ncols=60):
         optimizer.zero_grad()
-
-        outs = model(img.cuda(),ci_patch.cuda())   
+        outs = model(img.cuda()) 
+        img_target = img_target.cuda()
         # print("opt tensor:",out)
         ci_rgb = ci_rgb.cuda()
 
@@ -99,7 +100,7 @@ def train(trainloader, model, criterion, optimizer, lrsch, logger, args, epoch):
         #     for name, param in model.named_parameters():
         #         if ("transformer" in name):
         #             param.requires_grad = False
-        loss_batch = criterion(outs,ci_rgb)
+        loss_batch = criterion(outs,img_target)
         loss_batch.backward()
         loss_logger += loss_batch.item()    # 显示全部loss
         optimizer.step()
@@ -115,13 +116,14 @@ def validate(testloader, model, criterion, optimizer, lrsch, logger, args):
     model.eval()
     loss_logger = 0.
 
-    for img, ci_patch, ci_rgb in tqdm(testloader,ascii=True,ncols=60):
+    for img, ci_patch, img_target, ci_rgb in tqdm(testloader,ascii=True,ncols=60):
         with torch.no_grad():
-            outs = model(img.cuda(),ci_patch.cuda())   
+            outs = model(img.cuda())   
         ci_rgb = ci_rgb.cuda()
+        img_target = img_target.cuda()
         # print("label:",label)
         
-        loss_batch = criterion(outs,ci_rgb)
+        loss_batch = criterion(outs,img_target)
         loss_logger += loss_batch.item()    # 显示全部loss
 
     loss_logger /= len(testloader)
@@ -140,61 +142,54 @@ def sample_enhancement(model,inferenceloader,epoch):
     '''
     model.eval()
     cvd_process = cvdSimulateNet(cuda=True,batched_input=True) # 保证在同一个设备上进行全部运算
-    # for img,_ in inferenceloader:
-    #     img = img.cuda()
-    #     img_cvd = cvd_process(img)
-    #     img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
-    #     img_t:torch.Tensor = img[0,...].unsqueeze(0)        # shape C,H,W
-    #     break   # 只要第一张
-    image_sample = Image.open('apple.png').convert('RGB').resize((32,32))
-    image_sample = torch.tensor(np.array(image_sample)).permute(2,0,1).unsqueeze(0)/255.
-    image_sample = image_sample.cuda()
-    img_cvd = cvd_process(image_sample)
-    img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
-    img_t:torch.Tensor = image_sample[0,...].unsqueeze(0)        # shape C,H,W
+    for img,_ in inferenceloader:
+        img = img.cuda()
+        img_cvd = cvd_process(img)
+        img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
+        img_t:torch.Tensor = img[0,...].unsqueeze(0)        # shape C,H,W
+        break   # 只要第一张
+    # image_sample = Image.open('apple.png').convert('RGB').resize((32,32))
+    # image_sample = torch.tensor(np.array(image_sample)).permute(2,0,1).unsqueeze(0)/255.
+    # image_sample = image_sample.cuda()
+    # img_cvd = cvd_process(image_sample)
+    # img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
+    # img_t:torch.Tensor = image_sample[0,...].unsqueeze(0)        # shape C,H,W
 
     img_out = img_t.clone()
-    inference_criterion = conditionP()
-
-    # TODO: 改为更模块化的结构，利用batch提高运行效率
-    img_cvd_batch = img_cvd.repeat(64,1,1,1)
-    img_t_patches = patch_split(img_t.clone())
-    img_t_patches.requires_grad = True
-    img_ori_patches = patch_split(img_t)
-    inference_optimizer = torch.optim.SGD(params=[img_t_patches],lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
+    inference_criterion = nn.MSELoss()
+    img_t.requires_grad = True
+    inference_optimizer = torch.optim.SGD(params=[img_t],lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
     for iter in range(30):
         inference_optimizer.zero_grad()
-        img_cvd_patches = cvd_process(img_t_patches)
-        out = model(img_cvd_batch,img_cvd_patches)
-        loss = inference_criterion(out,img_ori_patches)    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
+        img_cvd_batch = cvd_process(img_t)
+        out = model(img_cvd_batch)
+        loss = inference_criterion(out,img_out)    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
         loss.backward()
         inference_optimizer.step()
+        print(f'Mean Absolute grad: {torch.mean(torch.abs(img_t.grad))}')
+
+    # img_out = img_t.clone()
+    # inference_criterion = conditionP()
+    # img_cvd_batch = img_cvd.repeat(64,1,1,1)
+    # img_t_patches = patch_split(img_t.clone())
+    # img_t_patches.requires_grad = True
+    # img_ori_patches = patch_split(img_t)
+    # inference_optimizer = torch.optim.SGD(params=[img_t_patches],lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
+    # for iter in range(30):
+    #     inference_optimizer.zero_grad()
+    #     img_cvd_patches = cvd_process(img_t_patches)
+    #     out = model(img_cvd_batch,img_cvd_patches)
+    #     loss = inference_criterion(out,img_ori_patches)    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
+    #     loss.backward()
+    #     inference_optimizer.step()
 
     ori_out_array = img_out.squeeze(0).permute(1,2,0).cpu().detach().numpy()
 
-    recolor_out_array = patch_compose(out)
+    recolor_out_array = out.clone()
     recolor_out_array = recolor_out_array.squeeze(0).permute(1,2,0).cpu().detach().numpy()
 
-    img_out_array = patch_compose(img_t_patches)
+    img_out_array = img_t.clone()
     img_out_array = img_out_array.squeeze(0).permute(1,2,0).cpu().detach().numpy()
-
-    # for i in tqdm(range(args.size//args.patch)):
-    #     for j in range(args.size//args.patch):
-    #         img_t_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch].clone().cuda()    # 重新调色后的patch
-    #         img_t_patch.requires_grad = True
-    #         # img_cvd_patch = cvd_process(img_t_patch).cuda()
-    #         img_ori_patch = img_t[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch]  # 作为GT的patch
-    #         inference_optimizer = torch.optim.SGD(params=[img_t_patch],lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
-    #         for iter in range(30):
-    #             inference_optimizer.zero_grad()
-    #             img_cvd_patch = cvd_process(img_t_patch)
-    #             out = model(img_cvd,img_cvd_patch)
-    #             loss = inference_criterion(out,img_ori_patch)    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
-    #             loss.backward()
-    #             inference_optimizer.step()
-
-    #         img_out[:,:,i*args.patch:(i+1)*args.patch,j*args.patch:(j+1)*args.patch] = img_t_patch
-    # img_out_array = img_out.squeeze(0).permute(1,2,0).cpu().detach().numpy()
 
     img_out_array = np.clip(np.vstack([ori_out_array,recolor_out_array,img_out_array]),0.0,1.0)
     plt.imshow(img_out_array)
