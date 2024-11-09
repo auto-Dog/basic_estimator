@@ -142,23 +142,23 @@ def sample_enhancement(model,inferenceloader,epoch):
     '''
     model.eval()
     cvd_process = cvdSimulateNet(cuda=True,batched_input=True) # 保证在同一个设备上进行全部运算
-    for img,_ in inferenceloader:
-        img = img.cuda()
-        img_cvd = cvd_process(img)
-        img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
-        img_t:torch.Tensor = img[0,...].unsqueeze(0)        # shape C,H,W
-        break   # 只要第一张
-    # image_sample = Image.open('apple.png').convert('RGB').resize((32,32))
-    # image_sample = torch.tensor(np.array(image_sample)).permute(2,0,1).unsqueeze(0)/255.
-    # image_sample = image_sample.cuda()
-    # img_cvd = cvd_process(image_sample)
-    # img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
-    # img_t:torch.Tensor = image_sample[0,...].unsqueeze(0)        # shape C,H,W
+    # for img,_ in inferenceloader:
+    #     img = img.cuda()
+    #     img_cvd = cvd_process(img)
+    #     img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
+    #     img_t:torch.Tensor = img[0,...].unsqueeze(0)        # shape C,H,W
+    #     break   # 只要第一张
+    image_sample = Image.open('apple.png').convert('RGB').resize((32,32))
+    image_sample = torch.tensor(np.array(image_sample)).permute(2,0,1).unsqueeze(0)/255.
+    image_sample = image_sample.cuda()
+    img_cvd = cvd_process(image_sample)
+    img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
+    img_t:torch.Tensor = image_sample[0,...].unsqueeze(0)        # shape C,H,W
 
     img_out = img_t.clone()
     inference_criterion = nn.MSELoss()
     img_t.requires_grad = True
-    inference_optimizer = torch.optim.SGD(params=[img_t],lr=args.lr,momentum=0.3)   # 对输入图像进行梯度下降
+    inference_optimizer = torch.optim.SGD(params=[img_t],lr=args.lr*100,momentum=0.3)   # 对输入图像进行梯度下降
     for iter in range(30):
         inference_optimizer.zero_grad()
         img_cvd_batch = cvd_process(img_t)
