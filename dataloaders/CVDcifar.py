@@ -80,7 +80,7 @@ class CVDImageNet(ImageFolder):
         path, target = self.samples[index]  # names form ImageNet -> ImageFolder -> DatasetFolder
         sample = self.loader(path)
 
-        img = self.transform(sample)
+        img = self.my_transform(sample)
         img_target = img.clone()
         random_index = torch.randint(0,self.image_size//self.patch_size,size=(2,))
         patch_target = img[:, random_index[0]*self.patch_size:random_index[0]*self.patch_size+self.patch_size, 
