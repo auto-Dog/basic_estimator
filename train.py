@@ -18,7 +18,7 @@ from PIL import Image
 from utils.logger import Logger
 from tqdm import tqdm
 from dataloaders.pic_data import ImgDataset
-from dataloaders.CVDcifar import CVDcifar
+from dataloaders.CVDcifar import CVDcifar,CVDImageNet
 from network import ViT,TinyUNet
 from utils.cvdObserver import cvdSimulateNet
 from utils.conditionP import conditionP
@@ -59,8 +59,10 @@ train_val_percent = 0.8
 # os.environ["CUDA_VISIBLE_DEVICES"] = '0,1'
 # skf = StratifiedGroupKFold(n_splits=n_splits)
 
-trainset = CVDcifar('./',train=True,download=True,patch_size=args.patch)
-testset = CVDcifar('./',train=False,download=True,patch_size=args.patch)
+# trainset = CVDcifar('./',train=True,download=True,patch_size=args.patch)
+# testset = CVDcifar('./',train=False,download=True,patch_size=args.patch)
+trainset = CVDImageNet('/kaggle/input/imagenetmini-1000/imagenet-mini',split='train',patch_size=args.patch)
+testset = CVDImageNet('/kaggle/input/imagenetmini-1000/imagenet-mini',split='val',patch_size=args.patch)
 inferenceset = CIFAR10('./',train=False,download=True,transform=transforms.Compose([transforms.ToTensor(),]))
 
 train_size = int(len(trainset) * train_val_percent)
@@ -148,7 +150,7 @@ def sample_enhancement(model,inferenceloader,epoch):
     #     img_cvd:torch.Tensor = img_cvd[0,...].unsqueeze(0)  # shape C,H,W
     #     img_t:torch.Tensor = img[0,...].unsqueeze(0)        # shape C,H,W
     #     break   # 只要第一张
-    image_sample = Image.open('apple.png').convert('RGB').resize((32,32))
+    image_sample = Image.open('apple.png').convert('RGB').resize((64,64))
     image_sample = torch.tensor(np.array(image_sample)).permute(2,0,1).unsqueeze(0)/255.
     image_sample = image_sample.cuda()
     img_cvd = cvd_process(image_sample)
@@ -159,14 +161,15 @@ def sample_enhancement(model,inferenceloader,epoch):
     inference_criterion = nn.MSELoss()
     img_t.requires_grad = True
     inference_optimizer = torch.optim.SGD(params=[img_t],lr=args.lr*100,momentum=0.3)   # 对输入图像进行梯度下降
-    for iter in range(30):
+    for iter in range(100):
         inference_optimizer.zero_grad()
         img_cvd_batch = cvd_process(img_t)
         out = model(img_cvd_batch)
         loss = inference_criterion(out,img_out)    # 相当于-log p(img_ori_patch|img_cvd,img_t_patch)
         loss.backward()
         inference_optimizer.step()
-        print(f'Mean Absolute grad: {torch.mean(torch.abs(img_t.grad))}')
+        if iter%10 == 0:
+            print(f'Mean Absolute grad: {torch.mean(torch.abs(img_t.grad))}')
 
     # img_out = img_t.clone()
     # inference_criterion = conditionP()
@@ -190,8 +193,8 @@ def sample_enhancement(model,inferenceloader,epoch):
 
     img_out_array = img_t.clone()
     img_out_array = img_out_array.squeeze(0).permute(1,2,0).cpu().detach().numpy()
-
-    img_out_array = np.clip(np.vstack([ori_out_array,recolor_out_array,img_out_array]),0.0,1.0)
+    img_diff = (img_out_array != ori_out_array)*1.0
+    img_out_array = np.clip(np.hstack([ori_out_array,recolor_out_array,img_out_array,img_diff]),0.0,1.0)
     plt.imshow(img_out_array)
     plt.savefig('./run/'+f'sample_e{epoch}.png')
 

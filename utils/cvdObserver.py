@@ -92,7 +92,7 @@ class cvdSimulateNet(nn.Module):
     
 if __name__ == '__main__':
     myobserver = cvdSimulateNet(cuda=False,batched_input=True)
-    image_sample_ori = Image.open('C:\\Users\\Administrator\\OneDrive\\CIE_CURVE\\CVD_simulation\\CVD_test.png').convert('RGB')
+    image_sample_ori = Image.open('C:\\Users\\Administrator\\OneDrive\\CIE_CURVE\\CVD_simulation\\apple.png').convert('RGB')
     image_sample_ori = torch.tensor(np.array(image_sample_ori)).permute(2,0,1).unsqueeze(0)/255.
     image_sample = image_sample_ori.clone()
     print(image_sample.is_leaf)

@@ -57,7 +57,7 @@ class CVDcifar(CIFAR10):
 class CVDImageNet(ImageNet):
     def __init__(self, root: str, split: str = "train", patch_size=4, **kwargs: Any) -> None:
         super().__init__(root, split, **kwargs)
-        self.image_size = 32
+        self.image_size = 64
         self.patch_size = patch_size
         self.my_transform = transforms.Compose(
             [
