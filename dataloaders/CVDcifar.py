@@ -1,13 +1,14 @@
 import numpy as np
 import cv2
 import torchvision.transforms as transforms
-from torchvision.datasets import CIFAR10,ImageNet
+from torchvision.datasets import CIFAR10,ImageNet,ImageFolder
 from torch.utils.data import DataLoader, Dataset
 import torch
 import os
 from typing import Any, Callable, Optional, Tuple
 from utils.cvdObserver import cvdSimulateNet
 from PIL import Image
+import os
 
 class CVDcifar(CIFAR10):
     def __init__(        
@@ -54,9 +55,10 @@ class CVDcifar(CIFAR10):
 
         return img, patch, img_target, patch_target # CVD image, CVD patch, image target, patch target
     
-class CVDImageNet(ImageNet):
+class CVDImageNet(ImageFolder):
     def __init__(self, root: str, split: str = "train", patch_size=4, **kwargs: Any) -> None:
-        super().__init__(root, split, **kwargs)
+        target_path = os.path.join(root,split)
+        super().__init__(target_path, **kwargs)
         self.image_size = 64
         self.patch_size = patch_size
         self.my_transform = transforms.Compose(
