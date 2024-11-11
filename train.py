@@ -83,7 +83,7 @@ model = model.cuda()
 criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, weight_decay=0.1)
 
-lrsch = torch.optim.lr_scheduler.MultiStepLR(optimizer,milestones=[7,20],gamma=0.3)
+lrsch = torch.optim.lr_scheduler.MultiStepLR(optimizer,milestones=[10,20],gamma=0.3)
 logger.auto_backup('./')
 
 def train(trainloader, model, criterion, optimizer, lrsch, logger, args, epoch):
@@ -106,7 +106,7 @@ def train(trainloader, model, criterion, optimizer, lrsch, logger, args, epoch):
         loss_batch.backward()
         loss_logger += loss_batch.item()    # 显示全部loss
         optimizer.step()
-        lrsch.step()
+    lrsch.step()
 
     loss_logger /= len(trainloader)
     print("Train loss:",loss_logger)
