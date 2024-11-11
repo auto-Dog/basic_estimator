@@ -160,7 +160,7 @@ def sample_enhancement(model,inferenceloader,epoch):
     img_out = img_t.clone()
     inference_criterion = nn.MSELoss()
     img_t.requires_grad = True
-    inference_optimizer = torch.optim.SGD(params=[img_t],lr=args.lr*100,momentum=0.3)   # 对输入图像进行梯度下降
+    inference_optimizer = torch.optim.SGD(params=[img_t],lr=args.lr*1000,momentum=0.3)   # 对输入图像进行梯度下降
     for iter in range(100):
         inference_optimizer.zero_grad()
         img_cvd_batch = cvd_process(img_t)
