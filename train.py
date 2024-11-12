@@ -135,7 +135,7 @@ def validate(testloader, model, criterion, optimizer, lrsch, logger, args):
 
     return acc, model.state_dict()
 
-def sample_enhancement(model,inferenceloader,epoch):
+def sample_enhancement(model,inferenceloader,epoch,args):
     ''' 根据给定的图片，进行颜色优化
 
     目标： $argmax_{c_i} p(\hat{c}|I^{cvd}c_i^{cvd})$ 
@@ -211,15 +211,16 @@ if args.test == True:
     finaltestset = CVDcifar('./',train=False,download=True)
     finaltestloader = torch.utils.data.DataLoader(finaltestset,batch_size=args.batchsize,shuffle = False,num_workers=8)
     model.load_state_dict(torch.load(pth_location, map_location='cpu'))
-    sample_enhancement(model,inferenceloader,-1)
+    sample_enhancement(model,inferenceloader,-1,args)
     # testing(finaltestloader,model,criterion,optimizer,lrsch,logger,args)
 else:
     for i in range(args.epoch):
         print("===========Epoch:{}==============".format(i))
-        # sample_enhancement(model,inferenceloader,i) # debug
+        if i==0:
+            sample_enhancement(model,inferenceloader,i,args) # debug
         train(trainloader, model,criterion,optimizer,lrsch,logger,args,i)
         score, model_save = validate(valloader,model,criterion,optimizer,lrsch,logger,args)
-        sample_enhancement(model,inferenceloader,i)
+        sample_enhancement(model,inferenceloader,i,args)
         if score > auc:
             auc = score
             torch.save(model_save, pth_location)
